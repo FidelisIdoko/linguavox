@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Report Card Generator</title>
+<style>
+  :root {
+    --bg: #eef2f7;
+    --card: #ffffff;
+    --ink: #1f2a44;
+    --muted: #6b7a90;
+    --line: #d7dfea;
+    --brand: #2563eb;
+    --brand-dark: #1e40af;
+    --pass: #15803d;
+    --fail: #b91c1c;
+    --soft: #f5f8fc;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    padding: 24px;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  .toolbar {
+    max-width: 900px;
+    margin: 0 auto 18px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .toolbar h1 { font-size: 18px; margin: 0; }
+  .toolbar .actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+  button {
+    font: inherit;
+    cursor: pointer;
+    border: 1px solid var(--line);
+    background: #fff;
+    color: var(--ink);
+    padding: 8px 14px;
+    border-radius: 8px;
+    transition: .15s;
+  }
+  button:hover { border-color: var(--brand); color: var(--brand); }
+  button.primary {
+    background: var(--brand);
+    border-color: var(--brand);
+    color: #fff;
+  }
+  button.primary:hover { background: var(--brand-dark); color: #fff; }
+  button.danger:hover { border-color: var(--fail); color: var(--fail); }
+
+  .sheet {
+    max-width: 900px;
+    margin: 0 auto;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 34px 38px;
+    box-shadow: 0 8px 30px rgba(31, 42, 68, .06);
+  }
+
+  /* ---- Header ---- */
+  .header {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    border-bottom: 3px double var(--brand);
+    padding-bottom: 16px;
+  }
+  .logo {
+    width: 78px;
+    height: 78px;
+    flex: 0 0 auto;
+    border: 1px dashed var(--line);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--muted);
+    font-size: 11px;
+    text-align: center;
+    background: var(--soft);
+    overflow: hidden;
+  }
+  .logo img { width: 100%; height: 100%; object-fit: contain; }
+  .header .titles { flex: 1; text-align: center; }
+  .school-name {
+    font-size: 26px;
+    font-weight: 800;
+    letter-spacing: .5px;
+    color: var(--brand-dark);
+    outline: none;
+  }
+  .school-sub { color: var(--muted); font-size: 13px; outline: none; }
+  .exam-title {
+    display: inline-block;
+    margin-top: 8px;
+    padding: 4px 16px;
+    background: var(--soft);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    font-weight: 600;
+    letter-spacing: .5px;
+    text-transform: uppercase;
+    font-size: 12px;
+    outline: none;
+  }
+
+  [contenteditable]:hover { background: rgba(37,99,235,.05); border-radius: 4px; }
+  [contenteditable]:focus { background: #fffbea; border-radius: 4px; box-shadow: 0 0 0 2px rgba(37,99,235,.25); }
+
+  /* ---- Student info ---- */
+  .student {
+    margin-top: 20px;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px 22px;
+  }
+  .field { display: flex; gap: 8px; align-items: baseline; border-bottom: 1px dotted var(--line); padding-bottom: 5px; }
+  .field .label { color: var(--muted); font-weight: 600; white-space: nowrap; }
+  .field .value { flex: 1; outline: none; }
+  .field .value:empty::before { content: "________________"; color: #c3ccda; }
+
+  /* ---- Marks table ---- */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 22px;
+  }
+  th, td { border: 1px solid var(--line); padding: 9px 12px; text-align: center; }
+  thead th {
+    background: var(--brand);
+    color: #fff;
+    font-weight: 600;
+    letter-spacing: .3px;
+  }
+  tbody td { outline: none; }
+  tbody td[contenteditable]:focus { background: #fffbea; }
+  tbody tr:nth-child(even) td { background: var(--soft); }
+  td.subject { text-align: left; font-weight: 600; }
+  tfoot td { font-weight: 700; background: #e8effb; }
+
+  .del {
+    border: none;
+    background: transparent;
+    color: var(--fail);
+    font-size: 16px;
+    padding: 0 4px;
+    line-height: 1;
+  }
+  .del:hover { transform: scale(1.2); }
+  .num { font-variant-numeric: tabular-nums; }
+
+  /* ---- Summary ---- */
+  .summary {
+    margin-top: 22px;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+  }
+  .stat {
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 12px 14px;
+    background: var(--soft);
+    text-align: center;
+  }
+  .stat .k { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .5px; }
+  .stat .v { font-size: 20px; font-weight: 800; margin-top: 4px; font-variant-numeric: tabular-nums; }
+  .stat.pass .v { color: var(--pass); }
+  .stat.fail .v { color: var(--fail); }
+
+  /* ---- Footer ---- */
+  .footer {
+    margin-top: 40px;
+    display: flex;
+    justify-content: space-between;
+    gap: 20px;
+  }
+  .sign { border-top: 1px solid var(--ink); padding-top: 6px; min-width: 180px; text-align: center; color: var(--muted); }
+
+  .hint {
+    max-width: 900px;
+    margin: 14px auto 0;
+    color: var(--muted);
+    font-size: 12px;
+    text-align: center;
+  }
+
+  /* ---- Print ---- */
+  @media print {
+    body { background: #fff; padding: 0; }
+    .toolbar, .del, .hint { display: none !important; }
+    .sheet {
+      max-width: none;
+      border: none;
+      border-radius: 0;
+      box-shadow: none;
+      padding: 10mm;
+    }
+    thead th { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    tbody tr:nth-child(even) td { background: var(--soft) !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    tfoot td { background: #e8effb !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .stat { background: var(--soft) !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  }
+
+  @media (max-width: 640px) {
+    .student, .summary { grid-template-columns: 1fr 1fr; }
+    .sheet { padding: 20px; }
+    .school-name { font-size: 20px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="toolbar">
+  <h1>Report Card Generator</h1>
+  <div class="actions">
+    <button onclick="addSubject()">+ Add Subject</button>
+    <button onclick="resetCard()">Reset</button>
+    <button class="primary" onclick="window.print()">Print / Save PDF</button>
+  </div>
+</div>
+
+<div class="sheet" id="sheet">
+  <div class="header">
+    <div class="logo" id="logoBox" title="Click to upload a logo" onclick="pickLogo()">LOGO</div>
+    <div class="titles">
+      <div class="school-name" contenteditable="true">Green Valley High School</div>
+      <div class="school-sub" contenteditable="true">123 Education Road, Springfield &bull; Ph: (555) 123-4567</div>
+      <div class="exam-title" contenteditable="true">Annual Examination 2026</div>
+    </div>
+    <input type="file" id="logoInput" accept="image/*" hidden>
+  </div>
+
+  <div class="student">
+    <div class="field"><span class="label">Student Name:</span><span class="value" contenteditable="true">Jane Doe</span></div>
+    <div class="field"><span class="label">Roll No:</span><span class="value" contenteditable="true">101</span></div>
+    <div class="field"><span class="label">Class:</span><span class="value" contenteditable="true">10 - A</span></div>
+    <div class="field"><span class="label">Father's Name:</span><span class="value" contenteditable="true">John Doe</span></div>
+    <div class="field"><span class="label">Date of Birth:</span><span class="value" contenteditable="true">01 Jan 2010</span></div>
+    <div class="field"><span class="label">Session:</span><span class="value" contenteditable="true">2025 - 2026</span></div>
+  </div>
+
+  <table id="marksTable">
+    <thead>
+      <tr>
+        <th style="width:44%">Subject</th>
+        <th>Max Marks</th>
+        <th>Marks Obtained</th>
+        <th>Grade</th>
+        <th style="width:48px"></th>
+      </tr>
+    </thead>
+    <tbody id="marksBody"></tbody>
+    <tfoot>
+      <tr>
+        <td class="subject">TOTAL</td>
+        <td class="num" id="totalMax">0</td>
+        <td class="num" id="totalObt">0</td>
+        <td id="overallGrade">-</td>
+        <td></td>
+      </tr>
+    </tfoot>
+  </table>
+
+  <div class="summary">
+    <div class="stat">
+      <div class="k">Percentage</div>
+      <div class="v" id="percent">0%</div>
+    </div>
+    <div class="stat">
+      <div class="k">Grade</div>
+      <div class="v" id="grade">-</div>
+    </div>
+    <div class="stat">
+      <div class="k">Division</div>
+      <div class="v" id="division">-</div>
+    </div>
+    <div class="stat" id="resultStat">
+      <div class="k">Result</div>
+      <div class="v" id="result">-</div>
+    </div>
+  </div>
+
+  <div class="footer">
+    <div class="sign">Class Teacher</div>
+    <div class="sign">Parent / Guardian</div>
+    <div class="sign">Principal</div>
+  </div>
+</div>
+
+<p class="hint">Everything with a highlight is editable &mdash; just click and type. Add or remove subjects, then Print / Save PDF.</p>
+
+<script>
+  const GRADE_BANDS = [
+    { min: 90, grade: "A+", gpa: 4.0 },
+    { min: 80, grade: "A",  gpa: 3.7 },
+    { min: 70, grade: "B+", gpa: 3.3 },
+    { min: 60, grade: "B",  gpa: 3.0 },
+    { min: 50, grade: "C",  gpa: 2.0 },
+    { min: 40, grade: "D",  gpa: 1.0 },
+    { min: 0,  grade: "F",  gpa: 0.0 },
+  ];
+  const PASS_PERCENT = 33;
+
+  function gradeFor(pct) {
+    if (pct >= 90) return "A+";
+    if (pct >= 80) return "A";
+    if (pct >= 70) return "B+";
+    if (pct >= 60) return "B";
+    if (pct >= 50) return "C";
+    if (pct >= 40) return "D";
+    return "F";
+  }
+
+  const body = document.getElementById("marksBody");
+
+  function addSubject(name = "New Subject", max = 100, obtained = 0) {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td class="subject" contenteditable="true">${name}</td>
+      <td class="num" contenteditable="true" data-max>${max}</td>
+      <td class="num" contenteditable="true" data-obt>${obtained}</td>
+      <td data-grade>-</td>
+      <td><button class="del" title="Remove" onclick="removeRow(this)">&times;</button></td>`;
+    body.appendChild(tr);
+    tr.querySelectorAll("[contenteditable]").forEach(cell =>
+      cell.addEventListener("input", recalc)
+    );
+    recalc();
+  }
+
+  function removeRow(btn) {
+    btn.closest("tr").remove();
+    recalc();
+  }
+
+  function recalc() {
+    let totalMax = 0, totalObt = 0, anyFail = false;
+
+    body.querySelectorAll("tr").forEach(tr => {
+      const maxCell = tr.querySelector("[data-max]");
+      const obtCell = tr.querySelector("[data-obt]");
+      const gradeCell = tr.querySelector("[data-grade]");
+
+      const max = parseFloat(maxCell.textContent) || 0;
+      const obt = parseFloat(obtCell.textContent) || 0;
+
+      totalMax += max;
+      totalObt += obt;
+
+      const pct = max > 0 ? (obt / max) * 100 : 0;
+      if (max > 0 && pct < PASS_PERCENT) anyFail = true;
+      gradeCell.textContent = max > 0 ? gradeFor(pct) : "-";
+    });
+
+    const pct = totalMax > 0 ? (totalObt / totalMax) * 100 : 0;
+
+    document.getElementById("totalMax").textContent = totalMax;
+    document.getElementById("totalObt").textContent = totalObt;
+    document.getElementById("percent").textContent = pct.toFixed(2) + "%";
+    document.getElementById("grade").textContent = gradeFor(pct);
+    document.getElementById("overallGrade").textContent = gradeFor(pct);
+
+    let division = "-";
+    if (pct >= 60) division = "First";
+    else if (pct >= 45) division = "Second";
+    else if (pct >= PASS_PERCENT) division = "Third";
+    else division = "-";
+    document.getElementById("division").textContent = division;
+
+    const pass = totalMax > 0 && !anyFail && pct >= PASS_PERCENT;
+    const stat = document.getElementById("resultStat");
+    const res = document.getElementById("result");
+    if (totalMax === 0) { res.textContent = "-"; stat.className = "stat"; }
+    else if (pass) { res.textContent = "PASS"; stat.className = "stat pass"; }
+    else { res.textContent = "FAIL"; stat.className = "stat fail"; }
+  }
+
+  function pickLogo() {
+    document.getElementById("logoInput").click();
+  }
+  document.getElementById("logoInput").addEventListener("change", e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      document.getElementById("logoBox").innerHTML = `<img src="${ev.target.result}" alt="logo">`;
+    };
+    reader.readAsDataURL(file);
+  });
+
+  function resetCard() {
+    if (!confirm("Reset the whole report card?")) return;
+    body.innerHTML = "";
+    ["Mathematics", "English", "Science", "Social Studies"].forEach(s => addSubject(s, 100, 0));
+  }
+
+  document.querySelectorAll(".sheet [contenteditable]").forEach(el =>
+    el.addEventListener("input", () => {})
+  );
+
+  ["Mathematics|100|78", "English|100|85", "Science|100|92", "Social Studies|100|66"]
+    .forEach(row => {
+      const [n, m, o] = row.split("|");
+      addSubject(n, m, o);
+    });
+</script>
+</body>
+</html>
